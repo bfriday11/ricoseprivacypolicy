@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deletion Request - Ricose</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #333; }
+        .box { border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; background-color: #fafafa; margin: 20px 0; }
+        .btn { display: inline-block; background-color: #d93025; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; cursor: pointer; border: none; font-size: 14px;}
+        .btn:hover { background-color: #b31412; }
+        .btn-secondary { background-color: #757575; }
+        .btn-secondary:hover { background-color: #5c5c5c; }
+        .warning-box { background-color: #fff0f0; border-left: 4px solid #d93025; padding: 15px; margin: 20px 0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .hidden { display: none; }
+        .success-msg { color: #2e7d32; font-weight: bold; margin-top: 15px; padding: 10px; background-color: #e8f5e9; border-radius: 4px;}
+        .error-msg { color: #c62828; font-weight: bold; margin-top: 10px; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <h1>Account Deletion Request</h1>
+    <p>This data deletion portal belongs to <strong>Ricose</strong>, developed by <strong>Raphael Hlortsi</strong>.</p>
+    
+    <hr>
+
+    <h2>How to Delete Your Account</h2>
+    <p>You can request the deletion of your account and all associated personal data at any time. Choose one of the two options below:</p>
+
+    <div class="box">
+        <h3>Option A: Instant Automated Deletion</h3>
+        <p>If you still have an active account, sign in below to verify your identity and instantly clear your database records.</p>
+        
+        <div id="login-section">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="Enter your game registration email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your account password">
+            </div>
+            <button id="btn-login" class="btn btn-secondary">1. Verify Identity</button>
+            <p id="auth-error" class="error-msg hidden"></p>
+        </div>
+
+        <div id="deletion-section" class="hidden">
+            <div class="warning-box">
+                <strong>Identity Confirmed!</strong> You are authorized as <span id="user-email-display" style="font-weight:bold;"></span>. Proceeding below executes an irreversible structural erase.
+            </div>
+            <button id="btn-delete-now" class="btn">2. Permanently Wipe My Entire Account</button>
+        </div>
+
+        <div id="status-message"></div>
+    </div>
+
+    <div class="box">
+        <h3>Option B: Manual Deletion Request</h3>
+        <p>If you have already uninstalled the app, signed up via alternative credentials, or cannot access your account, email our data privacy desk:</p>
+        <p><strong>Email:</strong> <a href="mailto:rhlortsi@gmail.com">rhlortsi@gmail.com</a></p>
+        <p><strong>Subject line:</strong> Request for Data Deletion - Ricose</p>
+        <p><em>Please supply the specific email address used when registering your account profile. Manual requests are analyzed and cleared within 7 business days.</em></p>
+    </div>
+
+    <h2>Data Retention & Deletion Policy</h2>
+    
+    <div class="warning-box">
+        <strong>Warning:</strong> Account deletion is absolute. Once confirmed, your in-game progress, high scores, customization records, and profile details cannot be recovered.
+    </div>
+
+    <h3>Types of Data Deleted</h3>
+    <p>Upon clicking the final deletion sequence, the following variables are completely purged from our structural servers:</p>
+    <ul>
+        <li><strong>Authentication Profile:</strong> Login credentials, email paths, and unique matching database User IDs (`UUID`).</li>
+        <li><strong>Personal Data:</strong> Display names, profile handles, and custom game settings.</li>
+        <li><strong>Application Data:</strong> High scores, localized save states, game progression stats, and activity logs.</li>
+    </ul>
+
+    <h3>Data We Are Required to Keep (Retention Period)</h3>
+    <p>All identifying data structures are completely zeroed out except for records legally or operationally required for preservation:</p>
+    <ul>
+        <li><strong>Financial & Purchase History:</strong> In-app transaction details handled via Google Play are archived safely for 7 years to satisfy regulatory tax documentation obligations and auditing frameworks.</li>
+        <li><strong>Anonymized Metrics:</strong> Purely functional, aggregated behavioral metrics may stay within telemetry trackers (this structured tracking is totally stripped of unique identifiers).</li>
+    </ul>
+
+    <script>
+        // REPLACE THESE VARIABLES WITH YOUR ACTUAL PUBLIC/ANON APP KEYS FROM THE SUPABASE DASHBOARD
+        // Path: Project Settings > API > Project URL & anon (public) API Key
+        const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co"; 
+        const SUPABASE_ANON_KEY = "YOUR_ANON_PUBLIC_KEY";
+        
+        // Initialize the client instance using ONLY the public key safely
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Fetch UI DOM Nodes
+        const loginSection = document.getElementById('login-section');
+        const deletionSection = document.getElementById('deletion-section');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const btnLogin = document.getElementById('btn-login');
+        const btnDeleteNow = document.getElementById('btn-delete-now');
+        const authError = document.getElementById('auth-error');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const statusMessage = document.getElementById('status-message');
+
+        // Step 1: User Identity Validation Flow
+        btnLogin.addEventListener('click', async () => {
+            authError.classList.add('hidden');
+            statusMessage.innerHTML = "";
+            
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showError(authError, "Please complete both fields to continue identity verification.");
+                return;
+            }
+
+            btnLogin.innerText = "Checking Credentials...";
+            btnLogin.disabled = true;
+
+            // Validate credentials against Supabase Auth engine
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showError(authError, `Verification Error: ${error.message}`);
+                btnLogin.innerText = "1. Verify Identity";
+                btnLogin.disabled = false;
+            } else {
+                // User validated successfully, update context UI
+                userEmailDisplay.innerText = data.user.email;
+                loginSection.classList.add('hidden');
+                deletionSection.classList.remove('hidden');
+            }
+        });
+
+        // Step 2: Final Account Purge Flow
+        btnDeleteNow.addEventListener('click', async () => {
+            const doubleCheck = confirm("Are you completely sure? This will instantly delete your Ricose account, including high scores, progress, and all personal data. This action cannot be reversed.");
+            if (!doubleCheck) return;
+
+            btnDeleteNow.innerText = "Wiping Data...";
+            btnDeleteNow.disabled = true;
+
+            // Securely run the elevated database query over the network
+            const { error } = await _supabase.rpc('delete_user_account');
+
+            if (error) {
+                statusMessage.innerHTML = `<p class="error-msg">Processing Error: ${error.message}</p>`;
+                btnDeleteNow.innerText = "2. Permanently Wipe My Entire Account";
+                btnDeleteNow.disabled = false;
+            } else {
+                // Force a signout to wipe active tokens stored in browser cookies / localstorage
+                await _supabase.auth.signOut();
+                
+                deletionSection.classList.add('hidden');
+                statusMessage.innerHTML = `<p class="success-msg">Success! Your Ricose account and all associated personal data have been completely deleted from our servers. You may now securely close this browser tab.</p>`;
+            }
+        });
+
+        function showError(element, text) {
+            element.innerText = text;
+            element.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
